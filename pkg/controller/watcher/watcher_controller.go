@@ -73,9 +73,6 @@ type ReconcileWatcher struct {
 	scheme *runtime.Scheme
 }
 
-//var commonInformerFactory = &InformerFactory{}
-var commonInformerFactory *dynamicinformer.DynamicSharedInformerFactory
-
 var allInformersFactories = make(map[string]*dynamicinformer.DynamicSharedInformerFactory)
 
 func GetInformerFactoryForNamespace(namespace string) dynamicinformer.DynamicSharedInformerFactory {
@@ -84,19 +81,17 @@ func GetInformerFactoryForNamespace(namespace string) dynamicinformer.DynamicSha
 		return *value
 	}
 
-	if commonInformerFactory == nil {
-		config, err := config.GetConfig()
+	config, err := config.GetConfig()
 
-		// Grab a dynamic interface that we can create informers from
-		dynamicset, err := dynamic.NewForConfig(config)
-		if err != nil {
-			fmt.Printf("could not generate dynamic client for config")
-		}
-
-		f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicset, 0, namespace, nil)
-		allInformersFactories[namespace] = &f
-		//informerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicset, 0, request.Namespace, nil)
+	// Grab a dynamic interface that we can create informers from
+	dynamicset, err := dynamic.NewForConfig(config)
+	if err != nil {
+		fmt.Printf("could not generate dynamic client for config")
 	}
+
+	f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicset, 0, namespace, nil)
+	allInformersFactories[namespace] = &f
+
 	return *allInformersFactories[namespace]
 }
 

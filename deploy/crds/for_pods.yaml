@@ -1,7 +1,7 @@
 apiVersion: aisonaku.com/v1alpha1
 kind: Watcher
 metadata:
-  name: pod-watcher
+  name: event-watcher
 spec:
   # Add fields here
-  kind: 'pods.v1.'
+  kind: 'events.v1.'
