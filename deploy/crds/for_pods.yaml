@@ -1,0 +1,7 @@
+apiVersion: aisonaku.com/v1alpha1
+kind: Watcher
+metadata:
+  name: pod-watcher
+spec:
+  # Add fields here
+  kind: 'pods.v1.'
