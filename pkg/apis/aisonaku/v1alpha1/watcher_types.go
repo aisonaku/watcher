@@ -10,13 +10,15 @@ import (
 
 // WatcherSpec defines the desired state of Watcher
 type WatcherSpec struct {
-	APIVersion string `json:"apiversion,omitempty"`
-	Kind string `json:"kind,omitempty"`
+	WatchResources []WatchResource `json:"watchResources,omitempty"`
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 }
 
+type WatchResource struct {
+	Kind string `json:"kind,omitempty"`
+}
 // WatcherStatus defines the observed state of Watcher
 type WatcherStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster

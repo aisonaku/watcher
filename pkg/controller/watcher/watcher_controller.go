@@ -137,15 +137,22 @@ func (r *ReconcileWatcher) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	informerFactory := informerFactoryType.factory
 
+	watchResources := instance.Spec.WatchResources
+	fmt.Println(watchResources)
 
-	// Retrieve a "GroupVersionResource" type that we need when generating our informer from our dynamic factory
-	gvr1, _ := schema.ParseResourceArg(instance.Spec.Kind)
+	for _, resource := range watchResources {
+		fmt.Println(resource.Kind)
+		// Retrieve a "GroupVersionResource" type that we need when generating our informer from our dynamic factory
+		gvr, _ := schema.ParseResourceArg(resource.Kind)
 
-	// Finally, create our informers!
-	informer1 := informerFactory.ForResource(*gvr1)
-	fmt.Println(informerFactory)
+		informerFactory.ForResource(*gvr)
+		//Finally, create an informer!
+		informer := informerFactory.ForResource(*gvr)
+		fmt.Println(informerFactory)
 
-	go startWatching(informerFactoryType.stopCh, informer1.Informer())
+		go startWatching(informerFactoryType.stopCh, informer.Informer())
+	}
+
 
 	return reconcile.Result{}, nil
 }

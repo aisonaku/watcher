@@ -3,5 +3,6 @@ kind: Watcher
 metadata:
   name: event-watcher
 spec:
-  # Add fields here
-  kind: 'pods.v1.'
+  watchResources:
+  - kind: 'pods.v1.'
+  - kind: 'services.v1.'
