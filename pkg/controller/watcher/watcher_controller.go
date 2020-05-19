@@ -30,10 +30,6 @@ import (
 
 var log = logf.Log.WithName("controller_watcher")
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new Watcher Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -73,12 +69,17 @@ type ReconcileWatcher struct {
 	scheme *runtime.Scheme
 }
 
-var allInformersFactories = make(map[string]*dynamicinformer.DynamicSharedInformerFactory)
+type InfomerFactory struct {
+	factory dynamicinformer.DynamicSharedInformerFactory
+	stopCh chan struct{}
+}
 
-func GetInformerFactoryForNamespace(namespace string) dynamicinformer.DynamicSharedInformerFactory {
+var allInformersFactories = make(map[string]*InfomerFactory)
+
+func GetInformerFactoryForNamespace(namespace string) (InfomerFactory, bool) {
 	value, found := allInformersFactories[namespace]
 	if found {
-		return *value
+		return *value, false
 	}
 
 	config, err := config.GetConfig()
@@ -90,45 +91,61 @@ func GetInformerFactoryForNamespace(namespace string) dynamicinformer.DynamicSha
 	}
 
 	f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicset, 0, namespace, nil)
-	allInformersFactories[namespace] = &f
+	newInformer := &InfomerFactory{factory: f, stopCh: make(chan struct{})}
+	allInformersFactories[namespace] = newInformer
 
-	return *allInformersFactories[namespace]
+	return *allInformersFactories[namespace], true
 }
 
 //Reconcile reads that state of the cluster for a Watcher object and makes changes based on the state read
 //and what is in the Watcher.Spec
 func (r *ReconcileWatcher) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Basic: Сделать структуру с указателем на InformerFactory + канал. Тут каждый раз убивать канал, создавать новый объект
-	// с InformerFactory, менять глобальный указатель на эту структуру, тогда получается и канал в ней будет новый и можно
-	// создавать информеры заново. Advanced: подумать не будет ли какой-то жести при куче вызовов reconcile параллельно
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	// подумать не будет ли какой-то жести при куче вызовов reconcile параллельно и изменеия переменной allInformersFactories
+	namespace := request.Namespace
+
+	reqLogger := log.WithValues("Request.Namespace", namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Watcher")
 	// Fetch the Watcher instance
 	instance := &aisonakuv1alpha1.Watcher{}
-	//fmt.Println(instance)
+	informerFactoryType, isNew := GetInformerFactoryForNamespace(namespace)
+	fmt.Println(informerFactoryType)
+	fmt.Println(allInformersFactories)
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			close(informerFactoryType.stopCh)
+			delete(allInformersFactories, namespace)
+			fmt.Println(allInformersFactories)
+			fmt.Println("Object Watch not found fot namespace " + namespace)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		fmt.Println("Error reading the object - requeue the request")
 		return reconcile.Result{}, err
 	}
-	informerFactory := GetInformerFactoryForNamespace(request.Namespace)
+
+
+	// Stop working informers for namespace to create the updated versions
+	if !isNew {
+		close(informerFactoryType.stopCh)
+		delete(allInformersFactories, namespace)
+		informerFactoryType, _ = GetInformerFactoryForNamespace(namespace)
+	}
+
+	informerFactory := informerFactoryType.factory
+
 
 	// Retrieve a "GroupVersionResource" type that we need when generating our informer from our dynamic factory
 	gvr1, _ := schema.ParseResourceArg(instance.Spec.Kind)
-	//gvr2, _ := schema.ParseResourceArg("events.v1.")
 
 	// Finally, create our informers!
 	informer1 := informerFactory.ForResource(*gvr1)
 	fmt.Println(informerFactory)
 
-	stopCh := make(chan struct{})
-	go startWatching(stopCh, informer1.Informer())
+	go startWatching(informerFactoryType.stopCh, informer1.Informer())
 
 	return reconcile.Result{}, nil
 }

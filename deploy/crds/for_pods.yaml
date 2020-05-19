@@ -4,4 +4,4 @@ metadata:
   name: event-watcher
 spec:
   # Add fields here
-  kind: 'events.v1.'
+  kind: 'pods.v1.'
