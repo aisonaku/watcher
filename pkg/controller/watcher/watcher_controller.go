@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
+	"net/http"
+	"os"
+	"strings"
 
 	aisonakuv1alpha1 "watcher-operator/pkg/apis/aisonaku/v1alpha1"
 
@@ -166,7 +168,21 @@ func startWatching(stopCh <-chan struct{}, s cache.SharedIndexInformer) {
 		},
 		DeleteFunc: func(obj interface{}) {
 			u := obj.(*unstructured.Unstructured)
-			fmt.Printf("resource deleted: %s \n", u)
+			jsonString, _ := json.Marshal(u)
+			fmt.Printf("resource deleted: %s \n", jsonString)
+			body := strings.NewReader(string(jsonString))
+			fmt.Println(os.Getenv("EL_URL"))
+			req, err := http.NewRequest("POST", os.Getenv("EL_URL"), body)
+			if err != nil {
+				// handle err
+			}
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				// handle err
+			}
+			defer resp.Body.Close()
 		},
 	}
 

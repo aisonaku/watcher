@@ -31,15 +31,20 @@ spec:
         spec:
           description: WatcherSpec defines the desired state of Watcher
           properties:
-            apiversion:
-              type: string
             watchResources:
               items:
                 properties:
                   kind:
                     type: string
+                  task:
+                    type: string
+                required:
+                - kind
+                - task
                 type: object
               type: array
+          required:
+          - watchResources
           type: object
         status:
           description: WatcherStatus defines the observed state of Watcher
