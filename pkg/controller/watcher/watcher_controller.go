@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/discovery"
+	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//"k8s.io/apimachinery/pkg/watch"
 )
 
@@ -110,8 +112,6 @@ func (r *ReconcileWatcher) Reconcile(request reconcile.Request) (reconcile.Resul
 	// Fetch the Watcher instance
 	instance := &aisonakuv1alpha1.Watcher{}
 	informerFactoryType, isNew := GetInformerFactoryForNamespace(namespace)
-	fmt.Println(informerFactoryType)
-	fmt.Println(allInformersFactories)
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -120,7 +120,6 @@ func (r *ReconcileWatcher) Reconcile(request reconcile.Request) (reconcile.Resul
 			// Return and don't requeue
 			close(informerFactoryType.stopCh)
 			delete(allInformersFactories, namespace)
-			fmt.Println(allInformersFactories)
 			fmt.Println("Object Watch not found fot namespace " + namespace)
 			return reconcile.Result{}, nil
 		}
@@ -140,17 +139,15 @@ func (r *ReconcileWatcher) Reconcile(request reconcile.Request) (reconcile.Resul
 	informerFactory := informerFactoryType.factory
 
 	watchResources := instance.Spec.WatchResources
-	fmt.Println(watchResources)
+	//fmt.Println(watchResources)
 
 	for _, resource := range watchResources {
-		fmt.Println(resource.Kind)
 		// Retrieve a "GroupVersionResource" type that we need when generating our informer from our dynamic factory
-		gvr, _ := schema.ParseResourceArg(resource.Kind)
-
-		informerFactory.ForResource(*gvr)
+		gvr, _ := DetermineGroupVersionResource(resource)
+		reqLogger.Info("Start watching " + gvr.String())
+		informerFactory.ForResource(gvr)
 		//Finally, create an informer!
-		informer := informerFactory.ForResource(*gvr)
-		fmt.Println(informerFactory)
+		informer := informerFactory.ForResource(gvr)
 
 		go startWatching(informerFactoryType.stopCh, informer.Informer())
 	}
@@ -165,6 +162,11 @@ func startWatching(stopCh <-chan struct{}, s cache.SharedIndexInformer) {
 			u := obj.(*unstructured.Unstructured)
 			jsonString, _ := json.Marshal(u)
 			fmt.Printf("resource added: %s \n", jsonString)
+		},
+		UpdateFunc: func(oldObj, obj interface{}) {
+			u := obj.(*unstructured.Unstructured)
+			jsonString, _ := json.Marshal(u)
+			fmt.Printf("resource updated: %s \n", jsonString)
 		},
 		DeleteFunc: func(obj interface{}) {
 			u := obj.(*unstructured.Unstructured)
@@ -188,4 +190,43 @@ func startWatching(stopCh <-chan struct{}, s cache.SharedIndexInformer) {
 
 	s.AddEventHandler(handlers)
 	s.Run(stopCh)
+}
+
+func DetermineGroupVersionResource(watchResource aisonakuv1alpha1.WatchResource) (schema.GroupVersionResource, error) {
+	// Resolve resource kind to the underlying API Resource type.
+	apiResource, err := FindAPIResource(watchResource.ApiVersion)
+	if err != nil {
+		fmt.Println(err)
+		return schema.GroupVersionResource{}, err
+	}
+
+	gvr := apiResource.WithResource(watchResource.Resource)
+	return gvr, nil
+}
+
+func FindAPIResource(apiVersion string) (schema.GroupVersion, error) {
+	c, err := config.GetConfig()
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(c)
+	if err != nil {
+		fmt.Printf("could not generate discovery client for config")
+	}
+
+	resourceList, err := discoveryClient.ServerResourcesForGroupVersion(apiVersion)
+	if err != nil {
+		return schema.GroupVersion{}, fmt.Errorf("error getting kubernetes server resources for apiVersion %s: %s", apiVersion, err)
+	}
+	for _, apiResource := range resourceList.APIResources {
+		r := &apiResource
+		gv := schema.GroupVersion{}
+		// Resolve GroupVersion from parent list to have consistent resource identifiers.
+		if r.Version == "" || r.Group == "" {
+			gv, err = schema.ParseGroupVersion(resourceList.GroupVersion)
+			if err != nil {
+				return schema.GroupVersion{}, fmt.Errorf("error parsing parsing GroupVersion: %v", err)
+			}
+		}
+		return gv, nil
+	}
+	return schema.GroupVersion{}, fmt.Errorf("error could not find resource with apiVersion", apiVersion)
 }

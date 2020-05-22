@@ -34,12 +34,15 @@ spec:
             watchResources:
               items:
                 properties:
-                  kind:
+                  apiVersion:
+                    type: string
+                  resource:
                     type: string
                   task:
                     type: string
                 required:
-                - kind
+                - apiVersion
+                - resource
                 - task
                 type: object
               type: array

@@ -17,7 +17,8 @@ type WatcherSpec struct {
 }
 
 type WatchResource struct {
-	Kind string `json:"kind"`
+	ApiVersion string `json:"apiVersion"`
+	Resource string `json:"resource"`
 	TriggerTaskName string `json:"task"`
 }
 // WatcherStatus defines the observed state of Watcher

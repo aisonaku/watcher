@@ -4,5 +4,7 @@ metadata:
   name: event-watcher
 spec:
   watchResources:
-  - kind: 'pods.v1.'
-  - kind: 'services.v1.'
+    - apiVersion: v1
+      resource: pods
+    - apiVersion: tekton.dev/v1beta1
+      resource: tass
