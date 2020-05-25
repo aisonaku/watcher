@@ -1,0 +1,156 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: watcher-operator
+  namespace: platform-watcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: watcher-operator
+  template:
+    metadata:
+      labels:
+        name: watcher-operator
+    spec:
+      serviceAccountName: watcher-operator
+      containers:
+        - name: watcher-operator
+          # Replace this with the built image name
+          image: registry.ci.tutu.ru/platform/watcher_controller:0.0.1
+          command:
+            - watcher-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              value: test-tekton-kuznetsova,kuznetsova-test
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "watcher-operator"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: watcher-operator
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - '*'
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - services
+      - services/finalizers
+      - endpoints
+      - persistentvolumeclaims
+      - events
+      - configmaps
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+    verbs:
+      - get
+      - create
+  - apiGroups:
+      - apps
+    resourceNames:
+      - watcher-operator
+    resources:
+      - deployments/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - aisonaku.com
+    resources:
+      - '*'
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: watcher-operator-test-tekton-kuznetsova
+  namespace: test-tekton-kuznetsova
+subjects:
+  - kind: ServiceAccount
+    name: watcher-operator
+    namespace: platform-watcher
+roleRef:
+  kind: ClusterRole
+  name: watcher-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: watcher-operator-kuznetsova-test
+  namespace: kuznetsova-test
+subjects:
+  - kind: ServiceAccount
+    name: watcher-operator
+    namespace: platform-watcher
+roleRef:
+  kind: ClusterRole
+  name: watcher-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: watcher-operator-platform-watcher
+  namespace: platform-watcher
+subjects:
+  - kind: ServiceAccount
+    name: watcher-operator
+    namespace: platform-watcher
+roleRef:
+  kind: ClusterRole
+  name: watcher-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: watcher-operator
+  namespace: platform-watcher

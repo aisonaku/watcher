@@ -1,10 +1,12 @@
 apiVersion: aisonaku.com/v1alpha1
 kind: Watcher
 metadata:
-  name: event-watcher
+  name: watcher
 spec:
+  eventListener: "http://el-stash-route-test-tekton-kuznetsova.control-platform.tutu.ru"
   watchResources:
     - apiVersion: v1
       resource: pods
     - apiVersion: tekton.dev/v1beta1
-      resource: tass
+      resource: tasks
+

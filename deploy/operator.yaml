@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: watcher-operator
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       name: watcher-operator
@@ -16,7 +16,7 @@ spec:
       containers:
         - name: watcher-operator
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: registry.ci.tutu.ru/platform/watcher_controller:0.0.1
           command:
           - watcher-operator
           imagePullPolicy: Always

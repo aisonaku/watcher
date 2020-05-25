@@ -149,14 +149,14 @@ func (r *ReconcileWatcher) Reconcile(request reconcile.Request) (reconcile.Resul
 		//Finally, create an informer!
 		informer := informerFactory.ForResource(gvr)
 
-		go startWatching(informerFactoryType.stopCh, informer.Informer())
+		go startWatching(informerFactoryType.stopCh, informer.Informer(), instance.Spec.EventListener)
 	}
 
 
 	return reconcile.Result{}, nil
 }
 
-func startWatching(stopCh <-chan struct{}, s cache.SharedIndexInformer) {
+func startWatching(stopCh <-chan struct{}, s cache.SharedIndexInformer, eventListenerUrl string) {
 	handlers := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			u := obj.(*unstructured.Unstructured)
@@ -174,7 +174,7 @@ func startWatching(stopCh <-chan struct{}, s cache.SharedIndexInformer) {
 			fmt.Printf("resource deleted: %s \n", jsonString)
 			body := strings.NewReader(string(jsonString))
 			fmt.Println(os.Getenv("EL_URL"))
-			req, err := http.NewRequest("POST", os.Getenv("EL_URL"), body)
+			req, err := http.NewRequest("POST", eventListenerUrl, body)
 			if err != nil {
 				// handle err
 			}

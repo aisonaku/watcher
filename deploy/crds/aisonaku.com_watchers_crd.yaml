@@ -10,8 +10,8 @@ spec:
     plural: watchers
     singular: watcher
   scope: Namespaced
-  subresources:
-    status: {}
+#  subresources:
+#    status: {}
   validation:
     openAPIV3Schema:
       description: Watcher is the Schema for the watchers API
@@ -31,6 +31,8 @@ spec:
         spec:
           description: WatcherSpec defines the desired state of Watcher
           properties:
+            eventListener:
+              type: string
             watchResources:
               items:
                 properties:
@@ -38,15 +40,13 @@ spec:
                     type: string
                   resource:
                     type: string
-                  task:
-                    type: string
                 required:
                 - apiVersion
                 - resource
-                - task
                 type: object
               type: array
           required:
+          - eventListener
           - watchResources
           type: object
         status:

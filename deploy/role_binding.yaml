@@ -1,10 +1,24 @@
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: watcher-operator
+  name: watcher-operator-default
+  namespace: default
 subjects:
 - kind: ServiceAccount
   name: watcher-operator
+roleRef:
+  kind: Role
+  name: watcher-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: watcher-operator-default
+  namespace: test
+subjects:
+  - kind: ServiceAccount
+    name: watcher-operator
 roleRef:
   kind: Role
   name: watcher-operator

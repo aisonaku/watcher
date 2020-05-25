@@ -10,6 +10,7 @@ import (
 
 // WatcherSpec defines the desired state of Watcher
 type WatcherSpec struct {
+	EventListener string `json:"eventListener"`
 	WatchResources []WatchResource `json:"watchResources"`
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
@@ -19,7 +20,6 @@ type WatcherSpec struct {
 type WatchResource struct {
 	ApiVersion string `json:"apiVersion"`
 	Resource string `json:"resource"`
-	TriggerTaskName string `json:"task"`
 }
 // WatcherStatus defines the observed state of Watcher
 type WatcherStatus struct {
